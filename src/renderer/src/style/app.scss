@@ -317,7 +317,7 @@ button:disabled {
 
 .radio {
   width: 205px;
-  height: 90px;
+  height: 120px;
   // margin: 5px;
   padding: 10px;
   color: $btn-text-color;
@@ -333,6 +333,11 @@ button:disabled {
   // Main layout container
   .radio-content {
     height: 100%;
+  }
+
+  // Main Top layout container
+  .radio-top-content {
+    height: 80%;
     display: flex;
     gap: 5%;
   }

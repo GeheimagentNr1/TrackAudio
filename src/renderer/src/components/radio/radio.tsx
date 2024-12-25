@@ -1,5 +1,6 @@
-import React from 'react';
-import useRadioState, { RadioType } from '../../store/radioStore';
+import React, {useEffect, useState} from 'react';
+import useRadioState, {RadioType} from '../../store/radioStore';
+import '../../style/Radio.scss';
 import clsx from 'clsx';
 import useErrorStore from '../../store/errorStore';
 import useSessionStore from '../../store/sessionStore';
@@ -9,7 +10,7 @@ export interface RadioProps {
   radio: RadioType;
 }
 
-const Radio: React.FC<RadioProps> = ({ radio }) => {
+const Radio: React.FC<RadioProps> = ({radio}) => {
   const postError = useErrorStore((state) => state.postError);
   const [
     setRadioState,
@@ -28,6 +29,37 @@ const Radio: React.FC<RadioProps> = ({ radio }) => {
   ]);
   const [isEditMode] = useUtilStore((state) => [state.isEditMode]);
   const isATC = useSessionStore((state) => state.isAtc);
+
+  const [localRadioGain, setLocalRadioGain] = useState(100);
+
+  const updateRadioGainValue = (newGain: number) => {
+    window.api
+      .SetFrequencyRadioGain(radio.frequency, newGain / 100)
+      .then(() => {
+        setLocalRadioGain(newGain);
+      })
+      .catch((err: unknown) => {
+        console.error(err);
+      });
+
+    window.localStorage.setItem(radio.callsign + 'RadioGain', newGain.toString());
+  };
+
+  useEffect(() => {
+    const storedGain = window.localStorage.getItem(radio.callsign + 'RadioGain');
+    const gainToSet = storedGain?.length ? parseInt(storedGain) : 100;
+    setLocalRadioGain(gainToSet);
+  }, []);
+
+  const handleRadioGainChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    updateRadioGainValue(event.target.valueAsNumber);
+  };
+
+  const handleRadioGainMouseWheel = (event: React.WheelEvent<HTMLInputElement>) => {
+    const newValue = Math.min(Math.max(localRadioGain + (event.deltaY > 0 ? -1 : 1), 0), 100);
+
+    updateRadioGainValue(newValue);
+  };
 
   const clickRadioHeader = () => {
     if (isEditMode) {
@@ -223,76 +255,93 @@ const Radio: React.FC<RadioProps> = ({ radio }) => {
       )}
     >
       <div className="radio-content">
-        <div className="radio-left">
-          <button
-            className="btn-no-interact radio-header"
-            onClick={clickRadioHeader}
-            onKeyDown={(e) => {
-              if (e.key === 'Delete' || e.key === 'Backspace') {
-                awaitEndOfRxForDeletion(radio.frequency);
-                setPendingDeletion(radio.frequency, true);
-              }
-            }}
-          >
-            <div className="radio-text-container">
-              <span className="frequency">{radio.humanFrequency}</span>
-              <span className="callsign text-muted">{radio.callsign}</span>
-            </div>
-          </button>
+        <div className="radio-top-content">
+          <div className="radio-left">
+            <button
+              className="btn-no-interact radio-header"
+              onClick={clickRadioHeader}
+              onKeyDown={(e) => {
+                if (e.key === 'Delete' || e.key === 'Backspace') {
+                  awaitEndOfRxForDeletion(radio.frequency);
+                  setPendingDeletion(radio.frequency, true);
+                }
+              }}
+            >
+              <div className="radio-text-container">
+                <span className="frequency">{radio.humanFrequency}</span>
+                <span className="callsign text-muted">{radio.callsign}</span>
+              </div>
+            </button>
 
-          <div className="radio-controls">
+            <div className="radio-controls">
+              <button
+                className={clsx(
+                  'btn control-btn',
+                  !radio.xc && !radio.crossCoupleAcross && 'btn-primary',
+                  radio.xc && 'btn-success',
+                  radio.crossCoupleAcross && 'btn-warning'
+                )}
+                onClick={clickCrossCoupleAcross}
+                onContextMenu={clickXc}
+                disabled={!isATC}
+              >
+                {radio.xc ? 'XC' : 'XCA'}
+              </button>
+
+              <button
+                className={clsx(
+                  'btn control-btn',
+                  !radio.onSpeaker && 'btn-primary',
+                  radio.onSpeaker && 'btn-success'
+                )}
+                onClick={clickSpK}
+              >
+                SPK
+              </button>
+            </div>
+          </div>
+
+          <div className="radio-right">
             <button
               className={clsx(
-                'btn control-btn',
-                !radio.xc && !radio.crossCoupleAcross && 'btn-primary',
-                radio.xc && 'btn-success',
-                radio.crossCoupleAcross && 'btn-warning'
+                'btn radio-button',
+                !radio.rx && 'btn-primary',
+                radio.rx && radio.currentlyRx && 'btn-warning',
+                radio.rx && !radio.currentlyRx && 'btn-success'
               )}
-              onClick={clickCrossCoupleAcross}
-              onContextMenu={clickXc}
-              disabled={!isATC}
+              onClick={clickRx}
             >
-              {radio.xc ? 'XC' : 'XCA'}
+              RX
             </button>
 
             <button
               className={clsx(
-                'btn control-btn',
-                !radio.onSpeaker && 'btn-primary',
-                radio.onSpeaker && 'btn-success'
+                'btn radio-button',
+                !radio.tx && 'btn-primary',
+                radio.tx && radio.currentlyTx && 'btn-warning',
+                radio.tx && !radio.currentlyTx && 'btn-success'
               )}
-              onClick={clickSpK}
+              onClick={clickTx}
+              disabled={!isATC}
             >
-              SPK
+              TX
             </button>
           </div>
         </div>
-
-        <div className="radio-right">
-          <button
-            className={clsx(
-              'btn radio-button',
-              !radio.rx && 'btn-primary',
-              radio.rx && radio.currentlyRx && 'btn-warning',
-              radio.rx && !radio.currentlyRx && 'btn-success'
-            )}
-            onClick={clickRx}
-          >
-            RX
-          </button>
-
-          <button
-            className={clsx(
-              'btn radio-button',
-              !radio.tx && 'btn-primary',
-              radio.tx && radio.currentlyTx && 'btn-warning',
-              radio.tx && !radio.currentlyTx && 'btn-success'
-            )}
-            onClick={clickTx}
-            disabled={!isATC}
-          >
-            TX
-          </button>
+        <div className="radio-bottom">
+          <input
+            type="range"
+            className="form-range radio-text radio-volume-bar "
+            style={{
+              lineHeight: '30px'
+            }}
+            min="0"
+            max="100"
+            step="1"
+            value={localRadioGain}
+            onChange={handleRadioGainChange}
+            onWheel={handleRadioGainMouseWheel}
+          ></input>
         </div>
       </div>
     </div>
