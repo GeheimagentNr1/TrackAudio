@@ -14,6 +14,7 @@ interface UtilStore {
   isEditMode: boolean;
   pendingRestart: boolean;
   transparentMiniMode: boolean;
+  enablePerStationVolume: boolean;
   time: Date;
   setIsEditMode: (isEditMode: boolean) => void;
   setPtt1KeyName: (ptt1KeyName: string) => void;
@@ -26,6 +27,7 @@ interface UtilStore {
   setWindowMaximised: (maximised: boolean) => void;
   setShowExpandedRxInfo: (showExpandedRxInfo: boolean) => void;
   setTransparentMiniMode: (transparentMiniMode: boolean) => void;
+  setEnablePerStationVolume: (enablePerStationVolume: boolean) => void;
   setPendingRestart: (pendingRestart: boolean) => void;
   setTime: (time: Date) => void;
 }
@@ -43,6 +45,7 @@ const useUtilStore = create<UtilStore>((set) => ({
   showExpandedRxInfo: false,
   isEditMode: false,
   transparentMiniMode: false,
+  enablePerStationVolume: false,
   pendingRestart: false,
   time: new Date(),
   setIsEditMode: (isEditMode: boolean) => {
@@ -77,6 +80,9 @@ const useUtilStore = create<UtilStore>((set) => ({
   },
   setTransparentMiniMode: (transparentMiniMode: boolean): void => {
     set({ transparentMiniMode });
+  },
+  setEnablePerStationVolume: (enablePerStationVolume: boolean): void => {
+    set({ enablePerStationVolume });
   },
   setPendingRestart: (pendingRestart: boolean): void => {
     set({ pendingRestart });

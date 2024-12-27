@@ -437,6 +437,10 @@ ipcMain.on('set-transparent-mini-mode', (_, transparentMiniMode: boolean) => {
   mainWindow?.setBackgroundMaterial('none');
 });
 
+ipcMain.on('set-enable-per-station-volume', (_, enablePerStationVolume: boolean) => {
+  configManager.updateConfig({ enablePerStationVolume });
+});
+
 ipcMain.handle('audio-get-apis', () => {
   return TrackAudioAfv.GetAudioApis();
 });

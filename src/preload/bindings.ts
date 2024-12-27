@@ -37,6 +37,9 @@ export const api = {
   setTransparentMiniMode: (state: boolean) => {
     ipcRenderer.send('set-transparent-mini-mode', state);
   },
+  setEnablePerStationVolume: (state: boolean) => {
+    ipcRenderer.send('set-enable-per-station-volume', state);
+  },
   getAudioApis: () => ipcRenderer.invoke('audio-get-apis'),
   getAudioInputDevices: (apiId: number) => ipcRenderer.invoke('audio-get-input-devices', apiId),
   getAudioOutputDevices: (apiId: number) => ipcRenderer.invoke('audio-get-output-devices', apiId),

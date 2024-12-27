@@ -22,4 +22,6 @@ export interface Configuration {
 
   showExpandedRx: boolean;
   transparentMiniMode: boolean;
+
+  enablePerStationVolume: boolean;
 }

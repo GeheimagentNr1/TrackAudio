@@ -23,7 +23,8 @@ export const defaultConfiguration = {
   radioGain: 0,
   alwaysOnTop: 'never' as AlwaysOnTopMode,
   showExpandedRx: false,
-  transparentMiniMode: false
+  transparentMiniMode: false,
+  enablePerStationVolume: false,
 };
 
 class ConfigManager {

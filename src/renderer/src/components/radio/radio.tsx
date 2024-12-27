@@ -12,6 +12,7 @@ export interface RadioProps {
 
 const Radio: React.FC<RadioProps> = ({radio}) => {
   const postError = useErrorStore((state) => state.postError);
+  const [enablePerStationVolume] = useUtilStore((state) => [state.enablePerStationVolume]);
   const [
     setRadioState,
     selectRadio,
@@ -33,22 +34,26 @@ const Radio: React.FC<RadioProps> = ({radio}) => {
   const [localRadioGain, setLocalRadioGain] = useState(100);
 
   const updateRadioGainValue = (newGain: number) => {
-    window.api
-      .SetFrequencyRadioGain(radio.frequency, newGain / 100)
-      .then(() => {
-        setLocalRadioGain(newGain);
-      })
-      .catch((err: unknown) => {
-        console.error(err);
-      });
+    if (enablePerStationVolume) {
+      window.api
+        .SetFrequencyRadioGain(radio.frequency, newGain / 100)
+        .then(() => {
+          setLocalRadioGain(newGain);
+        })
+        .catch((err: unknown) => {
+          console.error(err);
+        });
 
-    window.localStorage.setItem(radio.callsign + 'RadioGain', newGain.toString());
+      window.localStorage.setItem(radio.callsign + 'RadioGain', newGain.toString());
+    }
   };
 
   useEffect(() => {
-    const storedGain = window.localStorage.getItem(radio.callsign + 'RadioGain');
-    const gainToSet = storedGain?.length ? parseInt(storedGain) : 100;
-    setLocalRadioGain(gainToSet);
+    if (enablePerStationVolume) {
+      const storedGain = window.localStorage.getItem(radio.callsign + 'RadioGain');
+      const gainToSet = storedGain?.length ? parseInt(storedGain) : 100;
+      setLocalRadioGain(gainToSet);
+    }
   }, []);
 
   const handleRadioGainChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -328,21 +333,23 @@ const Radio: React.FC<RadioProps> = ({radio}) => {
             </button>
           </div>
         </div>
-        <div className="radio-bottom">
-          <input
-            type="range"
-            className="form-range radio-text radio-volume-bar "
-            style={{
-              lineHeight: '30px'
-            }}
-            min="0"
-            max="100"
-            step="1"
-            value={localRadioGain}
-            onChange={handleRadioGainChange}
-            onWheel={handleRadioGainMouseWheel}
-          ></input>
-        </div>
+        {enablePerStationVolume && (
+          <div className="radio-bottom">
+            <input
+              type="range"
+              className="form-range radio-text radio-volume-bar "
+              style={{
+                lineHeight: '30px'
+              }}
+              min="0"
+              max="100"
+              step="1"
+              value={localRadioGain}
+              onChange={handleRadioGainChange}
+              onWheel={handleRadioGainMouseWheel}
+            ></input>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -30,6 +30,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ closeModal }) => {
   const [config, setConfig] = useState({} as Configuration);
   const [alwaysOnTop, setAlwaysOnTop] = useState<AlwaysOnTopMode>('never');
   const [transparentMiniMode, setLocalTransparentMiniMode] = useState(false);
+  const [enablePerStationVolume, setLocalEnablePerStationVolume] = useState(false);
   const [cid, setCid] = useState('');
   const [password, setPassword] = useState('');
 
@@ -48,6 +49,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ closeModal }) => {
     showExpandedRxInfo,
     setShowExpandedRxInfo,
     setTransparentMiniMode,
+    setEnablePerStationVolume,
     setPendingRestart
   ] = useUtilStore((state) => [
     state.vu,
@@ -62,6 +64,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ closeModal }) => {
     state.showExpandedRxInfo,
     state.setShowExpandedRxInfo,
     state.setTransparentMiniMode,
+    state.setEnablePerStationVolume,
     state.setPendingRestart
   ]);
   const [isMicTesting, setIsMicTesting] = useState(false);
@@ -79,6 +82,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ closeModal }) => {
         setShowExpandedRxInfo(config.showExpandedRx);
         setTransparentMiniMode(config.transparentMiniMode);
         setLocalTransparentMiniMode(config.transparentMiniMode);
+        setEnablePerStationVolume(config.enablePerStationVolume);
+        setLocalEnablePerStationVolume(config.enablePerStationVolume);
       })
       .catch((err: unknown) => {
         console.error(err);
@@ -203,6 +208,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ closeModal }) => {
     } else {
       window.api.setTransparentMiniMode(false);
       setLocalTransparentMiniMode(false);
+    }
+    setPendingRestart(true);
+    setChangesSaved(SaveStatus.Saved);
+  };
+
+  const handleEnablePerStationVolume = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setChangesSaved(SaveStatus.Saving);
+    if (e.target.value === 'true') {
+      window.api.setEnablePerStationVolume(true);
+      setLocalEnablePerStationVolume(true);
+    } else {
+      window.api.setEnablePerStationVolume(false);
+      setLocalEnablePerStationVolume(false);
     }
     setPendingRestart(true);
     setChangesSaved(SaveStatus.Saved);
@@ -364,7 +382,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ closeModal }) => {
                   </div>
                 </div>
               </div>
-              <div className="col-6" style={{ float: 'right' }}>
+              <div className="col-6" style={{float: 'right'}}>
                 <div className="form-group">
                   <h5>Audio configuration</h5>
 
@@ -411,9 +429,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ closeModal }) => {
                   <option value="true">Always</option>
                   <option value="false">Never</option>
                 </select>
+                <label className="mt-2">Enable per station volume</label>
+                <select
+                  id=""
+                  className="form-control mt-1"
+                  onChange={handleEnablePerStationVolume}
+                  value={enablePerStationVolume.toString()}
+                >
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
               </div>
             </div>
-            <div className="modal-body" style={{ paddingTop: '0' }}>
+            <div className="modal-body" style={{paddingTop: '0'}}>
               <div className="col-12">
                 <button
                   className={clsx(
@@ -423,7 +451,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ closeModal }) => {
                   )}
                   onClick={handleMicTest}
                   disabled={
-                    !(hasPtt1BeenSetDuringSetup || hasPtt2BeenSetDuringSetup) ||
+                  !(hasPtt1BeenSetDuringSetup || hasPtt2BeenSetDuringSetup) ||
                     config.headsetOutputDeviceId === '' ||
                     config.speakerOutputDeviceId === '' ||
                     config.audioInputDeviceId === ''
