@@ -58,8 +58,8 @@ export const api = {
   GetStation: (callsign: string) => ipcRenderer.invoke('get-station', callsign),
   RefreshStation: (callsign: string) => ipcRenderer.invoke('refresh-station', callsign),
 
-  addFrequency: (frequency: number, callsign: string) =>
-    ipcRenderer.invoke('audio-add-frequency', frequency, callsign),
+  addFrequency: (frequency: number, callsign: string, radioGain: number | null) =>
+    ipcRenderer.invoke('audio-add-frequency', frequency, callsign, radioGain),
   removeFrequency: (frequency: number) => ipcRenderer.invoke('audio-remove-frequency', frequency),
   IsFrequencyActive: (frequency: number) =>
     ipcRenderer.invoke('audio-is-frequency-active', frequency),

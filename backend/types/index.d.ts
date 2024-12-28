@@ -50,7 +50,8 @@ declare namespace TrackAudioAfv {
 
   export function AddFrequency(
     frequency: number,
-    callign: string,
+    callsign: string,
+    radioGain: number | null,
   ): Promise<boolean>;
   export function RemoveFrequency(frequency: number): void;
   export function IsFrequencyActive(frequency: number): boolean;

@@ -39,7 +39,7 @@ const UnicomGuardBar = () => {
           : 'INVALIDUNIGUARD';
 
     window.api
-      .addFrequency(radio.frequency, radioName)
+      .addFrequency(radio.frequency, radioName, null)
       .then((ret) => {
         if (!ret) {
           postError(`Failed to re-add ${radioName} frequency`);
@@ -170,7 +170,7 @@ const UnicomGuardBar = () => {
         removeRadio(GuardFrequency);
       });
     } else {
-      void window.api.addFrequency(UnicomFrequency, 'UNICOM').then((ret) => {
+      void window.api.addFrequency(UnicomFrequency, 'UNICOM', null).then((ret) => {
         if (!ret) {
           console.error('Failed to add UNICOM frequency');
           return;
@@ -178,7 +178,7 @@ const UnicomGuardBar = () => {
         addRadio(UnicomFrequency, 'UNICOM', 'UNICOM');
         void window.api.SetFrequencyRadioGain(UnicomFrequency, localRadioGain / 100);
       });
-      void window.api.addFrequency(GuardFrequency, 'GUARD').then((ret) => {
+      void window.api.addFrequency(GuardFrequency, 'GUARD', null).then((ret) => {
         if (!ret) {
           console.error('Failed to add GUARD frequency');
           return;

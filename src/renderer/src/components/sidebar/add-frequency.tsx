@@ -27,7 +27,7 @@ const AddFrequency: React.FC<AddFrequencyProps> = ({ onAddFrequency }) => {
 
     const frequencyInHz = RadioHelper.convertMHzToHz(parseFloat(frequency));
     window.api
-      .addFrequency(frequencyInHz, '')
+      .addFrequency(frequencyInHz, '', null)
       .then((ret) => {
         if (!ret) {
           return; // This will check if the frequency exists and send an error message already
