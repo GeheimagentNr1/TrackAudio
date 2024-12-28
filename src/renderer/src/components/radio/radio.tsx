@@ -39,7 +39,7 @@ const Radio: React.FC<RadioProps> = ({ radio }) => {
 
   const updateRadioGainValue = (newGain: number, isManualMode = true, store = true) => {
     window.api
-      .SetFrequencyRadioGain(radio.frequency, newGain / 100)
+      .SetFrequencyRadioGain(radio.frequency, radioGain / 100 * newGain / 100)
       .then(() => {
         setIndividualRadioGain(radio.frequency, newGain, isManualMode);
       })
@@ -52,17 +52,15 @@ const Radio: React.FC<RadioProps> = ({ radio }) => {
   };
 
   useEffect(() => {
-    if (radio.tx && radio.radioGain && radioGain > radio.radioGain) {
+    if (radio.tx) {
       resetToMainGain();
+    } else {
+      setStoredGain();
     }
   }, [radio.tx]);
 
   useEffect(() => {
-    const storedGain = window.localStorage.getItem(radio.callsign + 'RadioGain');
-    const gainToSet = storedGain?.length ? parseInt(storedGain) : radioGain;
-    if (storedGain) {
-      updateRadioGainValue(gainToSet, false);
-    }
+    setStoredGain();
   }, []);
 
   const handleRadioGainChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,6 +71,14 @@ const Radio: React.FC<RadioProps> = ({ radio }) => {
     resetIndividualRadioGain(radio.frequency);
     updateRadioGainValue(radioGain, false);
     window.localStorage.removeItem(radio.callsign + 'RadioGain');
+  };
+
+  const setStoredGain = () => {
+    const storedGain = window.localStorage.getItem(radio.callsign + 'RadioGain');
+    const gainToSet = storedGain?.length ? parseInt(storedGain) : radioGain;
+    if (storedGain) {
+      updateRadioGainValue(gainToSet);
+    }
   };
 
   const handleRadioGainMouseWheel = (event: React.WheelEvent<HTMLInputElement>) => {
