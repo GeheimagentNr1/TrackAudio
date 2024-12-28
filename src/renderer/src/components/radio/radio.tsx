@@ -1,19 +1,23 @@
-import React, {useEffect, useState} from 'react';
-import useRadioState, {RadioType} from '../../store/radioStore';
+import React, { useEffect, useState } from 'react';
+import useRadioState, { RadioType } from '../../store/radioStore';
 import clsx from 'clsx';
 import useErrorStore from '../../store/errorStore';
 import useSessionStore from '../../store/sessionStore';
 import useUtilStore from '../../store/utilStore';
-import {Sliders2} from 'react-bootstrap-icons';
+import { Sliders2, XCircle } from 'react-bootstrap-icons';
 
 export interface RadioProps {
   radio: RadioType;
 }
 
-const Radio: React.FC<RadioProps> = ({radio}) => {
+const Radio: React.FC<RadioProps> = ({ radio }) => {
   const postError = useErrorStore((state) => state.postError);
+  const [radioGain] = useSessionStore((state) => [state.radioGain]);
+
   const [
     setRadioState,
+    setIndividualRadioGain,
+    resetIndividualRadioGain,
     selectRadio,
     removeRadio,
     setPendingDeletion,
@@ -21,6 +25,8 @@ const Radio: React.FC<RadioProps> = ({radio}) => {
     radiosToBeDeleted
   ] = useRadioState((state) => [
     state.setRadioState,
+    state.setIndividualRadioGain,
+    state.resetIndividualRadioGain,
     state.selectRadio,
     state.removeRadio,
     state.setPendingDeletion,
@@ -31,33 +37,46 @@ const Radio: React.FC<RadioProps> = ({radio}) => {
   const isATC = useSessionStore((state) => state.isAtc);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const [localRadioGain, setLocalRadioGain] = useState(100);
-
-  const updateRadioGainValue = (newGain: number) => {
+  const updateRadioGainValue = (newGain: number, isManualMode = true, store = true) => {
     window.api
       .SetFrequencyRadioGain(radio.frequency, newGain / 100)
       .then(() => {
-        setLocalRadioGain(newGain);
+        setIndividualRadioGain(radio.frequency, newGain, isManualMode);
       })
       .catch((err: unknown) => {
         console.error(err);
       });
 
+    if (!store) return;
     window.localStorage.setItem(radio.callsign + 'RadioGain', newGain.toString());
   };
 
   useEffect(() => {
+    if (radio.tx && radio.radioGain && radioGain > radio.radioGain) {
+      resetToMainGain();
+    }
+  }, [radio.tx]);
+
+  useEffect(() => {
     const storedGain = window.localStorage.getItem(radio.callsign + 'RadioGain');
-    const gainToSet = storedGain?.length ? parseInt(storedGain) : 100;
-    setLocalRadioGain(gainToSet);
+    const gainToSet = storedGain?.length ? parseInt(storedGain) : radioGain;
+    if (storedGain) {
+      updateRadioGainValue(gainToSet, false);
+    }
   }, []);
 
   const handleRadioGainChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     updateRadioGainValue(event.target.valueAsNumber);
   };
 
+  const resetToMainGain = () => {
+    resetIndividualRadioGain(radio.frequency);
+    updateRadioGainValue(radioGain, false);
+    window.localStorage.removeItem(radio.callsign + 'RadioGain');
+  };
+
   const handleRadioGainMouseWheel = (event: React.WheelEvent<HTMLInputElement>) => {
-    const newValue = Math.min(Math.max(localRadioGain + (event.deltaY > 0 ? -1 : 1), 0), 100);
+    const newValue = Math.min(Math.max(radio.radioGain + (event.deltaY > 0 ? -1 : 1), 0), 100);
 
     updateRadioGainValue(newValue);
   };
@@ -83,7 +102,8 @@ const Radio: React.FC<RadioProps> = ({radio}) => {
         newState ? radio.tx : false,
         newState ? radio.xc : false,
         radio.onSpeaker,
-        newState ? radio.crossCoupleAcross : false
+        newState ? radio.crossCoupleAcross : false,
+        radio.radioGain
       )
       .then((ret) => {
         if (!ret) {
@@ -114,7 +134,8 @@ const Radio: React.FC<RadioProps> = ({radio}) => {
         newState,
         !newState ? false : radio.xc, // If tx is false, xc must be false
         radio.onSpeaker,
-        !newState ? false : radio.crossCoupleAcross // If tx is false, crossCoupleAcross must be false
+        !newState ? false : radio.crossCoupleAcross, // If tx is false, crossCoupleAcross must be false,
+        radioGain
       )
       .then((ret) => {
         if (!ret) {
@@ -143,7 +164,8 @@ const Radio: React.FC<RadioProps> = ({radio}) => {
         newState ? true : radio.tx, // If xc is true, tx must be true
         newState,
         radio.onSpeaker,
-        false // If xc is true, crossCoupleAcross must be false
+        false, // If xc is true, crossCoupleAcross must be false
+        radio.radioGain
       )
       .then((ret) => {
         if (!ret) {
@@ -172,7 +194,8 @@ const Radio: React.FC<RadioProps> = ({radio}) => {
         newState ? true : radio.tx, // If crossCoupleAcross is true, tx must be true
         false, // If crossCoupleAcross is true, xc must be false
         radio.onSpeaker,
-        newState
+        newState,
+        radio.radioGain
       )
       .then((ret) => {
         if (!ret) {
@@ -201,7 +224,8 @@ const Radio: React.FC<RadioProps> = ({radio}) => {
         radio.tx,
         radio.xc,
         newState,
-        radio.crossCoupleAcross
+        radio.crossCoupleAcross,
+        radio.radioGain
       )
       .then((ret) => {
         if (!ret) {
@@ -254,7 +278,7 @@ const Radio: React.FC<RadioProps> = ({radio}) => {
 
   return (
     <div
-      style={{position: 'relative'}}
+      style={{ position: 'relative' }}
       className={clsx(
         'radio',
         isEditMode && radiosToBeDeleted.some((r) => r.frequency === radio.frequency) && 'bg-info',
@@ -272,32 +296,47 @@ const Radio: React.FC<RadioProps> = ({radio}) => {
           onClick={toggleSettings}
           title="Adjust individual radio volume"
         >
-          <Sliders2/>
+          <Sliders2 />
         </button>
       </div>
 
       <div className={clsx('radio-settings-overlay', isSettingsOpen && 'active')}>
-        {/* Add your settings content here */}
-        <div className="d-flex flex-row align-items-center px-3">
-          <div className="p-3 text-white">VOLUME</div>
+        <div className="d-flex flex-row align-items-center px-3 gap-2">
+          <div
+          // className={clsx({
+          //   'text-white': radio.manualGain,
+          //   'text-muted': !radio.manualGain
+          // })}
+          >
+            VOLUME
+          </div>
 
           <input
             type="range"
-            className="form-range radio-text radio-volume-bar "
+            className="form-range radio-text radio-volume-bar"
             style={{
-              lineHeight: '30px'
+              lineHeight: '30px',
+              width: '100px'
             }}
             min="0"
             max="100"
             step="1"
-            value={localRadioGain}
+            value={radio.radioGain}
             onChange={handleRadioGainChange}
             onWheel={handleRadioGainMouseWheel}
-          ></input>
+          />
+          <button
+            type="button"
+            className="radio-reset-gain"
+            onClick={resetToMainGain}
+            title="Reset Volume"
+            disabled={!radio.manualGain}
+          >
+            <XCircle size={13} />
+          </button>
         </div>
       </div>
       <div className="radio-content">
-
         <div className="radio-left">
           <button
             className="btn-no-interact radio-header"
@@ -316,7 +355,7 @@ const Radio: React.FC<RadioProps> = ({radio}) => {
           </button>
 
           <div className="radio-controls">
-            <button
+          <button
               className={clsx(
                 'btn control-btn',
                 !radio.xc && !radio.crossCoupleAcross && 'btn-primary',

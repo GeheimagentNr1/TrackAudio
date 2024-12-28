@@ -1,4 +1,5 @@
 #include "LogFactory.h"
+#include "afv-native/afv/dto/Station.h"
 #include "afv-native/afv/dto/StationTransceiver.h"
 #include "afv-native/atcClientWrapper.h"
 #include "afv-native/event.h"
@@ -182,6 +183,7 @@ Napi::Boolean AddFrequency(const Napi::CallbackInfo& info)
 
     int frequency = info[0].As<Napi::Number>().Int32Value();
     auto callsign = info[1].As<Napi::String>().Utf8Value();
+
     auto hasBeenAddded = mClient->AddFrequency(frequency, callsign);
     if (!hasBeenAddded) {
         NapiHelpers::sendErrorToElectron("Could not add frequency: it already exists");
@@ -236,9 +238,15 @@ Napi::Boolean SetFrequencyState(const Napi::CallbackInfo& info)
     newState.headset = !info[4].As<Napi::Boolean>().Value();
     newState.xca = info[5].As<Napi::Boolean>().Value(); // Not used
 
+    std::optional<float> radioGain = std::nullopt;
+    if (info.Length() > 6) {
+        if (!info[6].IsNull()) {
+            radioGain = info[6].As<Napi::Number>().FloatValue();
+        }
+    }
     // SetGuardAndUnicomTransceivers();
 
-    auto result = RadioHelper::SetRadioState(MainThreadShared::mApiServer, newState);
+    auto result = RadioHelper::SetRadioState(MainThreadShared::mApiServer, newState, "", radioGain);
     return Napi::Boolean::New(info.Env(), result);
 }
 
@@ -495,8 +503,9 @@ void RequestPttKeyName(const Napi::CallbackInfo& info)
 
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast,readability-function-cognitive-complexity)
 void HandleAfvEvents(afv_native::ClientEventType eventType, std::optional<std::string> string1,
-    std::optional<int> int1, std::optional<std::pair<std::string, unsigned int>> stationData,
-    std::optional<std::map<std::string, unsigned int>> vccsData)
+    std::optional<int> int1,
+    std::optional<std::pair<std::string, afv_native::SimpleAtcStation>> stationData,
+    std::optional<std::map<std::string, afv_native::SimpleAtcStation>> vccsData)
 {
     if (!NapiHelpers::callbackAvailable) {
         return;
@@ -542,15 +551,21 @@ void HandleAfvEvents(afv_native::ClientEventType eventType, std::optional<std::s
             return;
         }
 
-        std::string callsign = stationData->first;
-        unsigned int frequency = stationData->second;
+        const auto& [callsign, station] = stationData.value();
+        const auto frequency = station.frequency;
 
         if (mClient->IsFrequencyActive(frequency)) {
             PLOGW << "StationDataReceived: Frequency " << frequency << " already active, skipping";
             return;
         }
 
-        NapiHelpers::callElectron("StationDataReceived", callsign, std::to_string(frequency));
+        // Create a JSON object with the station data
+        nlohmann::json stationJson;
+        stationJson["name"] = station.name;
+        stationJson["frequency"] = station.frequency;
+        stationJson["frequencyAlias"] = station.frequencyAlias;
+
+        NapiHelpers::callElectron("StationDataReceived", callsign, stationJson.dump());
         MainThreadShared::mApiServer->publishStationAdded(callsign, static_cast<int>(frequency));
     }
 
@@ -559,18 +574,23 @@ void HandleAfvEvents(afv_native::ClientEventType eventType, std::optional<std::s
             return;
         }
 
-        std::map<std::string, unsigned int> stations = vccsData.value();
+        const auto& stations = vccsData.value();
 
-        for (const auto& station : stations) {
-            const std::string& callsign = station.first;
-            const unsigned int frequency = station.second;
+        for (const auto& [callsign, station] : stations) {
+            const auto frequency = station.frequency;
 
             if (mClient->IsFrequencyActive(frequency)) {
                 PLOGW << "VccsReceived: Frequency " << frequency << " already active, skipping";
                 continue;
             }
 
-            NapiHelpers::callElectron("StationDataReceived", callsign, std::to_string(frequency));
+            // Create a JSON object with the station data
+            nlohmann::json stationJson;
+            stationJson["name"] = station.name;
+            stationJson["frequency"] = station.frequency;
+            stationJson["frequencyAlias"] = station.frequencyAlias;
+
+            NapiHelpers::callElectron("StationDataReceived", callsign, stationJson.dump());
             MainThreadShared::mApiServer->publishStationAdded(
                 callsign, static_cast<int>(frequency));
         }

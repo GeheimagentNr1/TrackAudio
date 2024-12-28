@@ -71,7 +71,8 @@ const UnicomGuardBar = () => {
         newState ? radio.tx : false,
         false,
         radio.onSpeaker,
-        false
+        false,
+        null
       )
       .then((ret) => {
         if (!ret && !noError) {
@@ -102,7 +103,8 @@ const UnicomGuardBar = () => {
         newState,
         false,
         radio.onSpeaker,
-        false
+        false,
+        localRadioGain
       )
       .then((ret) => {
         if (!ret && !noError) {
@@ -132,7 +134,8 @@ const UnicomGuardBar = () => {
         radio.tx,
         radio.xc,
         newState,
-        radio.crossCoupleAcross
+        radio.crossCoupleAcross,
+        localRadioGain
       )
       .then((ret) => {
         if (!ret && !noError) {

@@ -69,7 +69,8 @@ export const api = {
     tx: boolean,
     xc: boolean,
     onSpeaker: boolean,
-    crossCoupleAcross: boolean
+    crossCoupleAcross: boolean,
+    radioGain: number | null
   ) =>
     ipcRenderer.invoke(
       'audio-set-frequency-state',
@@ -78,7 +79,8 @@ export const api = {
       tx,
       xc,
       onSpeaker,
-      crossCoupleAcross
+      crossCoupleAcross,
+      radioGain
     ),
   getFrequencyState: (frequency: number) =>
     ipcRenderer.invoke('audio-get-frequency-state', frequency),
@@ -216,9 +218,15 @@ export const api = {
   },
 
   log: {
-    info: (message: string) => { ipcRenderer.send('log-info', message); },
-    warn: (message: string) => { ipcRenderer.send('log-warn', message); },
-    error: (message: string) => { ipcRenderer.send('log-error', message); }
+    info: (message: string) => {
+      ipcRenderer.send('log-info', message);
+    },
+    warn: (message: string) => {
+      ipcRenderer.send('log-warn', message);
+    },
+    error: (message: string) => {
+      ipcRenderer.send('log-error', message);
+    }
   }
 };
 

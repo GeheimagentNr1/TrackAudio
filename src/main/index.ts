@@ -179,7 +179,7 @@ const createWindow = (): void => {
   // Set the logger file path
   log.transports.file.format = '{y}-{m}-{d} {h}:{i}:{s}:{ms} {level} [ELECTRON] {text}';
   log.transports.file.resolvePathFn = (): string => {
-    return TrackAudioAfv.GetLoggerFilePath() as string;
+    return TrackAudioAfv.GetLoggerFilePath();
   };
 
   const options: Electron.BrowserWindowConstructorOptions = {
@@ -514,9 +514,12 @@ ipcMain.handle('disconnect', () => {
   TrackAudioAfv.Disconnect();
 });
 
-ipcMain.handle('audio-add-frequency', (_, frequency: number, callsign: string) => {
-  return TrackAudioAfv.AddFrequency(frequency, callsign);
-});
+ipcMain.handle(
+  'audio-add-frequency',
+  (_, frequency: number, callsign: string, radioGain: number | null) => {
+    return TrackAudioAfv.AddFrequency(frequency, callsign, radioGain);
+  }
+);
 
 ipcMain.handle('audio-remove-frequency', (_, frequency: number) => {
   TrackAudioAfv.RemoveFrequency(frequency);
@@ -531,9 +534,18 @@ ipcMain.handle(
     tx: boolean,
     xc: boolean,
     onSpeaker: boolean,
-    crossCoupleAcross: boolean
+    crossCoupleAcross: boolean,
+    radioGain: number | null
   ) => {
-    return TrackAudioAfv.SetFrequencyState(frequency, rx, tx, xc, onSpeaker, crossCoupleAcross);
+    return TrackAudioAfv.SetFrequencyState(
+      frequency,
+      rx,
+      tx,
+      xc,
+      onSpeaker,
+      crossCoupleAcross,
+      radioGain
+    );
   }
 );
 

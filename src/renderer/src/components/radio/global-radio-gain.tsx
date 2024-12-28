@@ -1,14 +1,42 @@
 import useSessionStore from '@renderer/store/sessionStore';
 import '../../style/GlobalRadio.scss';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Configuration } from 'src/shared/config.type';
 import { useMediaQuery } from 'react-responsive';
+import useRadioState from '@renderer/store/radioStore';
+import { GuardFrequency, UnicomFrequency } from '../../../../shared/common';
+import clsx from 'clsx';
 const GlobalRadioGain = () => {
   const [radioGain, setRadioGain] = useSessionStore((state) => [
     state.radioGain,
     state.setRadioGain
   ]);
+
+  const [radios] = useRadioState((state) => [state.radios]);
   const isWideScreen = useMediaQuery({ minWidth: '895px' });
+  const [availableRadios, setAvailableRadios] = useState<boolean>(false);
+
+  useEffect(() => {
+    for (const radio of radios) {
+      if (![UnicomFrequency, GuardFrequency].includes(radio.frequency) && !radio.manualGain) {
+        setAvailableRadios(true);
+        return;
+      }
+    }
+    setAvailableRadios(false);
+  }, [radios]);
+
+  const setMasterGain = (newGain: number) => {
+    for (const radio of radios) {
+      if (![UnicomFrequency, GuardFrequency].includes(radio.frequency) && !radio.manualGain) {
+        setRadioGain(newGain);
+        radio.radioGain = newGain;
+        window.api.SetFrequencyRadioGain(radio.frequency, newGain).catch((err: unknown) => {
+          console.error(err);
+        });
+      }
+    }
+  };
 
   useEffect(() => {
     window.api
@@ -17,38 +45,20 @@ const GlobalRadioGain = () => {
         const gain = config.radioGain || 0.5;
         const UiGain = gain * 100 || 50;
 
-        window.api
-          .SetRadioGain(gain)
-          .then(() => {
-            setRadioGain(UiGain);
-          })
-          .catch((err: unknown) => {
-            console.error(err);
-          });
+        setMasterGain(UiGain);
       })
       .catch((err: unknown) => {
         console.error(err);
       });
   }, [setRadioGain]);
 
-  const updateRadioGainValue = (newGain: number) => {
-    window.api
-      .SetRadioGain(newGain / 100)
-      .then(() => {
-        setRadioGain(newGain);
-      })
-      .catch((err: unknown) => {
-        console.error(err);
-      });
-  };
-
   const handleRadioGainChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    updateRadioGainValue(event.target.valueAsNumber);
+    setMasterGain(event.target.valueAsNumber);
   };
 
   const handleRadioGainMouseWheel = (event: React.WheelEvent<HTMLInputElement>) => {
     const newValue = Math.min(Math.max(radioGain + (event.deltaY > 0 ? -1 : 1), 0), 100);
-    updateRadioGainValue(newValue);
+    setMasterGain(newValue);
   };
 
   return (
@@ -79,13 +89,16 @@ const GlobalRadioGain = () => {
       >
         <input
           type="range"
-          className="form-range unicom-text global-volume-bar"
+          className={clsx('form-range unicom-text global-volume-bar', {
+            'no-radios': !availableRadios
+          })}
           min="0"
           max="100"
           step="1"
           onChange={handleRadioGainChange}
           onWheel={handleRadioGainMouseWheel}
           value={radioGain}
+          disabled={!availableRadios}
         />
       </div>
     </div>

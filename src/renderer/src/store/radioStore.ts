@@ -3,6 +3,7 @@ import useSessionStore from './sessionStore';
 import { radioCompare } from '../helpers/RadioHelper';
 import { getCallsignParts } from '../helpers/CallsignHelper';
 import { GuardFrequency, UnicomFrequency } from '../../../shared/common';
+import { Station } from '@renderer/interfaces/Station';
 
 export interface RadioType {
   frequency: number;
@@ -23,6 +24,8 @@ export interface RadioType {
   position: string;
   subPosition: string;
   isPendingDeleting: boolean;
+  radioGain: number;
+  manualGain: boolean;
 }
 
 export interface FrequencyState {
@@ -37,9 +40,12 @@ interface RadioState {
   radios: RadioType[];
   radiosSelected: RadioType[];
   pttIsOn: boolean;
+  addRadioByStation: (radio: Station, stationCallsign: string) => void;
   addRadio: (frequency: number, callsign: string, stationCallsign: string) => void;
   removeRadio: (frequency: number) => void;
   setRadioState: (frequency: number, frequencyState: FrequencyState) => void;
+  setIndividualRadioGain: (frequency: number, gain: number, isManualMode?: boolean) => void;
+  resetIndividualRadioGain: (frequency: number) => void;
   setCurrentlyTx: (value: boolean) => void;
   setCurrentlyRx: (frequency: number, value: boolean) => void;
   selectRadio: (frequency: number) => void;
@@ -82,6 +88,24 @@ const useRadioState = create<RadioState>((set, get) => ({
   radios: [],
   radiosSelected: [],
   pttIsOn: false,
+  manualGain: false,
+  setIndividualRadioGain: (frequency, gain, isManualMode = true) => {
+    set((state) => ({
+      radios: state.radios.map((radio) =>
+        radio.frequency === frequency
+          ? { ...radio, radioGain: gain, manualGain: isManualMode }
+          : radio
+      )
+    }));
+  },
+
+  resetIndividualRadioGain: (frequency) => {
+    set((state) => ({
+      radios: state.radios.map((radio) =>
+        radio.frequency === frequency ? { ...radio, manualGain: false } : radio
+      )
+    }));
+  },
   addRadio: (frequency, callsign, stationCallsign) => {
     if (get().getRadioByFrequency(frequency)) {
       if (frequency !== UnicomFrequency && frequency !== GuardFrequency) {
@@ -113,7 +137,49 @@ const useRadioState = create<RadioState>((set, get) => ({
           onSpeaker: false,
           selected: false,
           transceiverCount: 0,
-          isPendingDeleting: false
+          isPendingDeleting: false,
+          radioGain: 100,
+          manualGain: false
+        }
+      ].sort((a, b) => radioCompare(a, b, stationCallsign))
+    }));
+  },
+  addRadioByStation: (radio: Station, stationCallsign: string) => {
+    const { frequency, name: callsign } = radio;
+
+    if (RadioHelper.doesRadioExist(useRadioState.getState().radios, frequency)) {
+      if (frequency !== UnicomFrequency && frequency !== GuardFrequency) {
+        postMessage(
+          'Frequency already exists in local client, but maybe not in AFV, delete it and try again'
+        );
+      }
+      return;
+    }
+
+    const [station, position, subPosition] = getCallsignParts(callsign);
+
+    set((state) => ({
+      radios: [
+        ...state.radios,
+        {
+          frequency,
+          humanFrequency: RadioHelper.convertHzToMhzString(frequency),
+          callsign,
+          station,
+          position,
+          subPosition,
+          rx: false,
+          tx: false,
+          xc: false,
+          crossCoupleAcross: false,
+          currentlyTx: false,
+          currentlyRx: false,
+          onSpeaker: false,
+          selected: false,
+          transceiverCount: 0,
+          isPendingDeleting: false,
+          radioGain: 100,
+          manualGain: false
         }
       ].sort((a, b) => radioCompare(a, b, stationCallsign))
     }));
